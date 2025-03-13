@@ -236,7 +236,7 @@ export default function App() {
       {showInstructions && (
         <Modal title="Instrucciones" onClose={() => setShowInstructions(false)}>
           <p>
-            Mueve tu coche entre los tres carriles usando los botones de
+            Mueve tu coche azul entre los tres carriles usando los botones de
             dirección o las flechas del teclado. Evita los obstáculos y acumula
             puntos.
           </p>
