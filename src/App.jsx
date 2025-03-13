@@ -247,8 +247,8 @@ export default function App() {
         <Modal title="Acerca de" onClose={() => setShowAbout(false)}>
           <p>
             Este juego fue desarrollado para simular una carretera con
-            obstáculos, para la clase de Tecnologias Avanzadas de aplicaciones
-            moviles.
+            obstáculos esta carretera tiene lineas blancas, para la clase de
+            Tecnologias Avanzadas de aplicaciones moviles.
           </p>
         </Modal>
       )}
