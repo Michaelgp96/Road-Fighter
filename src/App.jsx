@@ -238,7 +238,7 @@ export default function App() {
           <p>
             Mueve tu coche azul entre los tres carriles usando los botones de
             dirección o las flechas del teclado. Evita los obstáculos y acumula
-            puntos.
+            puntos GENIALESSSS.
           </p>
         </Modal>
       )}
