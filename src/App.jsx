@@ -1,8 +1,111 @@
 import React, { useState, useEffect } from "react";
+import { db } from "./firebaseConfig";
+import { collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
 import "./App.css";
 
+// Componente para mostrar puntajes
+const ScoreBoard = ({ onClose }) => {
+  const [scores, setScores] = useState([]);
+
+  useEffect(() => {
+    const fetchScores = async () => {
+      try {
+        const scoresRef = collection(db, "scores");
+        const q = query(scoresRef, orderBy("score", "desc"), limit(10));
+        const querySnapshot = await getDocs(q);
+        
+        const fetchedScores = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setScores(fetchedScores);
+      } catch (error) {
+        console.error("Error fetching scores:", error);
+      }
+    };
+
+    fetchScores();
+  }, []);
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h3>Mejores Puntajes</h3>
+        <table className="score-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Puntaje</th>
+            </tr>
+          </thead>
+          <tbody>
+            {scores.map((score) => (
+              <tr key={score.id}>
+                <td>{score.name}</td>
+                <td>{score.score}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <button className="button close-button" onClick={onClose}>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Componente de ingreso de nombre
+const NameInput = ({ onStart }) => {
+  const [name, setName] = useState("");
+
+  const handleStart = () => {
+    if (name.trim()) {
+      onStart(name);
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h3>Ingresa tu Nombre</h3>
+        <input 
+          type="text" 
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nombre del Jugador"
+          className="name-input"
+        />
+        <button 
+          className="button start-button" 
+          onClick={handleStart}
+          disabled={!name.trim()}
+        >
+          Comenzar Juego
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Componente Modal reutilizable
+const Modal = ({ title, children, onClose }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h3>{title}</h3>
+        {children}
+        <button className="button close-button" onClick={onClose}>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Componente Game - Contiene toda la lógica del juego
-const Game = ({ onBack }) => {
+const Game = ({ onBack, playerName }) => {
   // Configuración del juego
   const screenWidth = 360;
   const carWidth = 40;
@@ -89,8 +192,22 @@ const Game = ({ onBack }) => {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [carLane]);
 
+  // Modificación de restartGame para guardar puntaje
+  const saveScore = async () => {
+    try {
+      await addDoc(collection(db, "scores"), {
+        name: playerName,
+        score: score,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error("Error saving score:", error);
+    }
+  };
+
   // Función para reiniciar el juego
   const restartGame = () => {
+    saveScore();
     setGameOver(false);
     setScore(0);
     setObstacles([]);
@@ -184,37 +301,27 @@ const Game = ({ onBack }) => {
   );
 };
 
-// Componente Modal reutilizable
-const Modal = ({ title, children, onClose }) => {
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <h3>{title}</h3>
-        {children}
-        <button className="button close-button" onClick={onClose}>
-          Cerrar
-        </button>
-      </div>
-    </div>
-  );
-};
-
 // Componente App principal
 export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showScoreboard, setShowScoreboard] = useState(false);
+  const [playerName, setPlayerName] = useState(null);
+
+  const handleStartGame = (name) => {
+    setPlayerName(name);
+    setIsPlaying(true);
+  };
 
   return (
     <div className="app-container">
-      {isPlaying ? (
-        <Game onBack={() => setIsPlaying(false)} />
-      ) : (
+      {!isPlaying && !playerName && (
         <div className="menu-container">
           <h1>🏎️ Juego de Coches</h1>
           <button
             className="button start-button"
-            onClick={() => setIsPlaying(true)}
+            onClick={() => setPlayerName("")}
           >
             Iniciar Juego 🚗
           </button>
@@ -226,11 +333,31 @@ export default function App() {
           </button>
           <button
             className="button info-button"
+            onClick={() => setShowScoreboard(true)}
+          >
+            Mejores Puntajes
+          </button>
+          <button
+            className="button info-button"
             onClick={() => setShowAbout(true)}
           >
             Acerca de
           </button>
         </div>
+      )}
+
+      {!isPlaying && playerName === "" && (
+        <NameInput onStart={handleStartGame} />
+      )}
+
+      {isPlaying && playerName && (
+        <Game 
+          onBack={() => {
+            setIsPlaying(false);
+            setPlayerName(null);
+          }} 
+          playerName={playerName} 
+        />
       )}
 
       {showInstructions && (
@@ -251,6 +378,10 @@ export default function App() {
             Tecnologias Avanzadas de aplicaciones moviles.
           </p>
         </Modal>
+      )}
+
+      {showScoreboard && (
+        <ScoreBoard onClose={() => setShowScoreboard(false)} />
       )}
     </div>
   );
